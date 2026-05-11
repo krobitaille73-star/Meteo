@@ -381,12 +381,68 @@
     return WMO_CODES[code] ?? ['Unknown', '🌡️'];
   }
 
-  const input    = document.getElementById('city-input');
-  const btn      = document.getElementById('search-btn');
-  const locBtn   = document.getElementById('loc-btn');
-  const card     = document.getElementById('weather-card');
-  const errorBox = document.getElementById('error-box');
-  const loading  = document.getElementById('loading');
+  const input       = document.getElementById('city-input');
+  const btn         = document.getElementById('search-btn');
+  const locBtn      = document.getElementById('loc-btn');
+  const card        = document.getElementById('weather-card');
+  const errorBox    = document.getElementById('error-box');
+  const loading     = document.getElementById('loading');
+  const clockWidget = document.getElementById('clock-widget');
+  const clockTime   = document.getElementById('clock-time');
+  const clockDate   = document.getElementById('clock-date');
+  const clockTz     = document.getElementById('clock-tz');
+
+  let clockInterval = null;
+
+  function startClock(timezone) {
+    if (clockInterval) clearInterval(clockInterval);
+
+    function tick() {
+      const now = new Date();
+
+      // Time — HH:MM:SS in the city's timezone
+      const timeParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        hour:   '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }).formatToParts(now);
+
+      const get = type => timeParts.find(p => p.type === type)?.value ?? '';
+      const hh   = get('hour');
+      const mm   = get('minute');
+      const ss   = get('second');
+      const ampm = get('dayPeriod');
+
+      // Build time display with blinking colons
+      clockTime.textContent = '';
+      const addText = t => { const s = document.createElement('span'); s.textContent = t; clockTime.appendChild(s); };
+      const addColon = () => { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; clockTime.appendChild(c); };
+      addText(hh); addColon(); addText(mm); addColon(); addText(ss);
+      const amEl = document.createElement('span');
+      amEl.className = 'clock-ampm';
+      amEl.textContent = ampm;
+      clockTime.appendChild(amEl);
+
+      // Date — e.g. "Monday, May 11"
+      clockDate.textContent = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        weekday: 'long',
+        month:   'long',
+        day:     'numeric',
+      }).format(now);
+
+      // Timezone abbreviation + offset — e.g. "EDT · UTC−4"
+      const tzAbbr  = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'short'  }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? '';
+      const tzLong  = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? '';
+      clockTz.textContent = tzLong ? `${tzAbbr} · ${tzLong}` : tzAbbr;
+    }
+
+    tick();
+    clockInterval = setInterval(tick, 1000);
+    clockWidget.classList.add('visible');
+  }
 
   const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
