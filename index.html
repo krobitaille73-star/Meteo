@@ -3,12 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Content Security Policy: restrict what the page can load/execute -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'none';
+    script-src 'unsafe-inline';
+    style-src 'unsafe-inline';
+    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org;
+    img-src https://upload.wikimedia.org https://maps.wikimedia.org data:;
+  " />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="no-referrer" />
   <title>Weather Dashboard</title>
   <style>
+    html, body { height: 100%; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
+      width: 100vw;
       font-family: 'Segoe UI', system-ui, sans-serif;
       background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
       background-size: cover;
@@ -253,7 +265,7 @@
 
   <div class="search-row">
     <button class="loc-btn" id="loc-btn" title="Use my location">📍</button>
-    <input id="city-input" type="text" placeholder="Enter a city name…" autocomplete="off" />
+    <input id="city-input" type="text" placeholder="Enter a city name…" autocomplete="off" maxlength="100" />
     <button id="search-btn">Search</button>
   </div>
 
@@ -336,24 +348,32 @@
     card.classList.remove('visible');
   }
 
+  function makeEl(tag, cls, text) {
+    const el = document.createElement(tag);
+    el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
   function renderForecast(daily) {
     const container = document.getElementById('forecast');
-    container.innerHTML = '';
-    for (let i = 0; i < daily.time.length; i++) {
-      const date = new Date(daily.time[i] + 'T12:00:00');
+    container.textContent = ''; // safer than innerHTML = ''
+    const len = Math.min(daily.time.length, 7); // guard against unexpected payload sizes
+    for (let i = 0; i < len; i++) {
+      const code = Number(daily.weather_code[i]);
+      const high = Math.round(Number(daily.temperature_2m_max[i]));
+      const low  = Math.round(Number(daily.temperature_2m_min[i]));
+      if (!isFinite(high) || !isFinite(low)) continue; // skip malformed rows
+      const date    = new Date(String(daily.time[i]) + 'T12:00:00');
       const dayName = i === 0 ? 'Today' : DAY_NAMES[date.getDay()];
-      const [, icon] = getCondition(daily.weather_code[i]);
-      const high = Math.round(daily.temperature_2m_max[i]);
-      const low  = Math.round(daily.temperature_2m_min[i]);
-      const el = document.createElement('div');
-      el.className = 'forecast-day';
-      el.innerHTML = `
-        <div class="fc-day-name">${dayName}</div>
-        <div class="fc-icon">${icon}</div>
-        <div class="fc-high">${high}°</div>
-        <div class="fc-low">${low}°</div>
-      `;
-      container.appendChild(el);
+      const [, icon] = getCondition(code);
+
+      const card = makeEl('div', 'forecast-day');
+      card.appendChild(makeEl('div', 'fc-day-name', dayName));
+      card.appendChild(makeEl('div', 'fc-icon',     icon));
+      card.appendChild(makeEl('div', 'fc-high',     `${high}°`));
+      card.appendChild(makeEl('div', 'fc-low',      `${low}°`));
+      container.appendChild(card);
     }
   }
 
@@ -366,18 +386,41 @@
     );
     const wxData = await wxRes.json();
     const cur = wxData.current;
-    const [condLabel, condIcon] = getCondition(cur.weather_code);
+    // Validate all numeric fields before rendering
+    const temp     = Math.round(Number(cur.temperature_2m));
+    const humidity = Number(cur.relative_humidity_2m);
+    const wind     = Math.round(Number(cur.wind_speed_10m));
+    if (!isFinite(temp) || !isFinite(humidity) || !isFinite(wind)) {
+      throw new Error('Unexpected API response format.');
+    }
+    const [condLabel, condIcon] = getCondition(Number(cur.weather_code));
 
     document.getElementById('city-name').textContent = cityLabel;
     document.getElementById('country').textContent   = countryLabel;
     document.getElementById('temp-icon').textContent = condIcon;
-    document.getElementById('temp-value').innerHTML  =
-      `${Math.round(cur.temperature_2m)}<sup>°C</sup>`;
+
+    // Build temp element safely via DOM (avoids innerHTML)
+    const tempEl = document.getElementById('temp-value');
+    tempEl.textContent = `${temp}`;
+    const sup = document.createElement('sup');
+    sup.textContent = '°C';
+    tempEl.appendChild(sup);
+
     document.getElementById('condition').textContent = condLabel;
-    document.getElementById('humidity').innerHTML    =
-      `${cur.relative_humidity_2m}<span class="stat-unit"> %</span>`;
-    document.getElementById('wind').innerHTML        =
-      `${Math.round(cur.wind_speed_10m)}<span class="stat-unit"> km/h</span>`;
+
+    const humEl = document.getElementById('humidity');
+    humEl.textContent = `${humidity}`;
+    const humUnit = document.createElement('span');
+    humUnit.className = 'stat-unit';
+    humUnit.textContent = ' %';
+    humEl.appendChild(humUnit);
+
+    const windEl = document.getElementById('wind');
+    windEl.textContent = `${wind}`;
+    const windUnit = document.createElement('span');
+    windUnit.className = 'stat-unit';
+    windUnit.textContent = ' km/h';
+    windEl.appendChild(windUnit);
 
     renderForecast(wxData.daily);
 
@@ -395,7 +438,7 @@
       );
       const geoData = await geoRes.json();
       if (!geoData.results?.length) {
-        showError(`City "${city}" not found. Try a different spelling.`);
+        showError('City not found. Try a different spelling.');
         return;
       }
       const { name, country, latitude, longitude } = geoData.results[0];
@@ -436,16 +479,29 @@
     });
   }
 
+  function isSafeImageUrl(url) {
+    // Only allow HTTPS URLs pointing to Wikimedia image servers
+    try {
+      const u = new URL(url);
+      return u.protocol === 'https:' &&
+             (u.hostname.endsWith('.wikimedia.org') || u.hostname.endsWith('.wikipedia.org'));
+    } catch { return false; }
+  }
+
   async function setCityBackground(cityName) {
     try {
       const res = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
       );
+      if (!res.ok) return;
       const data = await res.json();
       const imgUrl = data.originalimage?.source || data.thumbnail?.source;
-      if (!imgUrl) return;
+      if (!imgUrl || !isSafeImageUrl(imgUrl)) return; // reject any unexpected URL
       const img = new Image();
-      img.onload = () => { document.body.style.backgroundImage = `url('${imgUrl}')`; };
+      img.onload = () => {
+        // CSS-escape single quotes so the URL can never break out of url('...')
+        document.body.style.backgroundImage = `url('${imgUrl.replace(/'/g, '%27')}')`;
+      };
       img.src = imgUrl;
     } catch {
       // silently fail — keep gradient
