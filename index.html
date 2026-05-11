@@ -350,35 +350,39 @@
 </div>
 
 <script>
+  // Each entry: [label, day icon, night icon]
   const WMO_CODES = {
-    0:  ['Clear sky',              '☀️'],
-    1:  ['Mainly clear',           '🌤️'],
-    2:  ['Partly cloudy',          '⛅'],
-    3:  ['Overcast',               '☁️'],
-    45: ['Foggy',                  '🌫️'],
-    48: ['Icy fog',                '🌫️'],
-    51: ['Light drizzle',          '🌦️'],
-    53: ['Moderate drizzle',       '🌦️'],
-    55: ['Dense drizzle',          '🌧️'],
-    61: ['Slight rain',            '🌧️'],
-    63: ['Moderate rain',          '🌧️'],
-    65: ['Heavy rain',             '🌧️'],
-    71: ['Slight snow',            '🌨️'],
-    73: ['Moderate snow',          '❄️'],
-    75: ['Heavy snow',             '❄️'],
-    77: ['Snow grains',            '🌨️'],
-    80: ['Slight showers',         '🌦️'],
-    81: ['Moderate showers',       '🌧️'],
-    82: ['Violent showers',        '⛈️'],
-    85: ['Snow showers',           '🌨️'],
-    86: ['Heavy snow showers',     '❄️'],
-    95: ['Thunderstorm',           '⛈️'],
-    96: ['Thunderstorm w/ hail',   '⛈️'],
-    99: ['Thunderstorm w/ hail',   '⛈️'],
+    0:  ['Clear sky',              '☀️',  '🌙'],
+    1:  ['Mainly clear',           '🌤️', '🌙'],
+    2:  ['Partly cloudy',          '⛅',  '🌙'],
+    3:  ['Overcast',               '☁️',  '☁️'],
+    45: ['Foggy',                  '🌫️', '🌫️'],
+    48: ['Icy fog',                '🌫️', '🌫️'],
+    51: ['Light drizzle',          '🌦️', '🌧️'],
+    53: ['Moderate drizzle',       '🌦️', '🌧️'],
+    55: ['Dense drizzle',          '🌧️', '🌧️'],
+    61: ['Slight rain',            '🌧️', '🌧️'],
+    63: ['Moderate rain',          '🌧️', '🌧️'],
+    65: ['Heavy rain',             '🌧️', '🌧️'],
+    71: ['Slight snow',            '🌨️', '🌨️'],
+    73: ['Moderate snow',          '❄️',  '❄️'],
+    75: ['Heavy snow',             '❄️',  '❄️'],
+    77: ['Snow grains',            '🌨️', '🌨️'],
+    80: ['Slight showers',         '🌦️', '🌧️'],
+    81: ['Moderate showers',       '🌧️', '🌧️'],
+    82: ['Violent showers',        '⛈️',  '⛈️'],
+    85: ['Snow showers',           '🌨️', '🌨️'],
+    86: ['Heavy snow showers',     '❄️',  '❄️'],
+    95: ['Thunderstorm',           '⛈️',  '⛈️'],
+    96: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
+    99: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
   };
 
-  function getCondition(code) {
-    return WMO_CODES[code] ?? ['Unknown', '🌡️'];
+  // isDay=true → daytime icon, isDay=false → night icon
+  // Forecast rows always use daytime (isDay defaults to true)
+  function getCondition(code, isDay = true) {
+    const entry = WMO_CODES[code] ?? ['Unknown', '🌡️', '🌡️'];
+    return [entry[0], isDay ? entry[1] : entry[2]];
   }
 
   const input       = document.getElementById('city-input');
