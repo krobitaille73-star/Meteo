@@ -551,6 +551,24 @@
     }
   }
 
+  // UV Index → risk label + CSS class (WHO scale)
+  function uvRisk(uv) {
+    if (uv <= 2)  return ['Low',       'uv-low'];
+    if (uv <= 5)  return ['Moderate',  'uv-moderate'];
+    if (uv <= 7)  return ['High',      'uv-high'];
+    if (uv <= 10) return ['Very High', 'uv-veryhigh'];
+    return            ['Extreme',    'uv-extreme'];
+  }
+
+  // Safely parse "YYYY-MM-DDTHH:MM" (no tz offset) → "H:MM AM/PM"
+  function parseDailyTime(isoStr) {
+    const match = String(isoStr).match(/T(\d{2}):(\d{2})$/);
+    if (!match) return '–';
+    const h = parseInt(match[1], 10);
+    const m = match[2];
+    return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+
   async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel) {
     const wxRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
