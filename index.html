@@ -535,6 +535,10 @@
 
     renderForecast(wxData.daily);
 
+    // Start live clock in the city's local timezone
+    const timezone = wxData.timezone || 'UTC';
+    startClock(timezone);
+
     loading.classList.remove('visible');
     card.classList.add('visible');
   }
