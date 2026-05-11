@@ -391,47 +391,61 @@
   <div class="loading" id="loading"><span class="spinner"></span>Fetching weather…</div>
 
   <div class="card" id="weather-card">
-    <div class="city-name" id="city-name"></div>
-    <div class="country" id="country"></div>
-    <div class="main-temp">
-      <div class="temp-icon" id="temp-icon"></div>
-      <div class="temp-value" id="temp-value"><sup>°C</sup></div>
-    </div>
-    <div class="condition" id="condition"></div>
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-label">Humidity</div>
-        <div class="stat-value" id="humidity">–<span class="stat-unit"> %</span></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Wind Speed</div>
-        <div class="stat-value" id="wind">–<span class="stat-unit"> km/h</span></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">UV Index</div>
-        <div class="stat-value" id="uv-value">–</div>
-        <div id="uv-badge"></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Precipitation</div>
-        <div class="stat-value" id="precip">–<span class="stat-unit"> mm</span></div>
-        <div class="stat-sub" id="precip-sub"></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Sunset</div>
-        <div class="stat-value" id="sunset">–</div>
-        <div class="stat-sub" id="sunrise-sub"></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Today's Range</div>
-        <div class="avg-row">
-          <span class="avg-high" id="avg-high">–°</span>
-          <span class="avg-low"  id="avg-low">–°</span>
+
+    <!-- Horizontal main row: city/temp LEFT · stats RIGHT -->
+    <div class="card-main">
+
+      <div class="card-left">
+        <div class="city-name" id="city-name"></div>
+        <div class="country"   id="country"></div>
+        <div class="main-temp">
+          <div class="temp-icon"  id="temp-icon"></div>
+          <div class="temp-value" id="temp-value"><sup>°C</sup></div>
         </div>
-        <div class="stat-sub">High · Low</div>
+        <div class="condition" id="condition"></div>
       </div>
-    </div>
+
+      <div class="card-right">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Humidity</div>
+            <div class="stat-value" id="humidity">–<span class="stat-unit"> %</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Wind Speed</div>
+            <div class="stat-value" id="wind">–<span class="stat-unit"> km/h</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">UV Index</div>
+            <div class="stat-value" id="uv-value">–</div>
+            <div id="uv-badge"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Precipitation</div>
+            <div class="stat-value" id="precip">–<span class="stat-unit"> mm</span></div>
+            <div class="stat-sub" id="precip-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Sunset</div>
+            <div class="stat-value" id="sunset">–</div>
+            <div class="stat-sub" id="sunrise-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Today's Range</div>
+            <div class="avg-row">
+              <span class="avg-high" id="avg-high">–°</span>
+              <span class="avg-low"  id="avg-low">–°</span>
+            </div>
+            <div class="stat-sub">High · Low</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.card-main -->
+
+    <!-- 7-day forecast — full width below -->
     <div class="forecast" id="forecast"></div>
+
   </div>
 </div>
 
