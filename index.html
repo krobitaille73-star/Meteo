@@ -616,6 +616,44 @@
     windUnit.textContent = ' km/h';
     windEl.appendChild(windUnit);
 
+    // ── UV Index ──────────────────────────────────
+    const uv = Math.round(Number(cur.uv_index));
+    const uvEl = document.getElementById('uv-value');
+    uvEl.textContent = isFinite(uv) ? String(uv) : '–';
+    const uvBadgeEl = document.getElementById('uv-badge');
+    uvBadgeEl.textContent = '';
+    if (isFinite(uv)) {
+      const [riskLabel, riskClass] = uvRisk(uv);
+      const badge = document.createElement('span');
+      badge.className = `uv-badge ${riskClass}`;
+      badge.textContent = riskLabel;
+      uvBadgeEl.appendChild(badge);
+    }
+
+    // ── Precipitation ─────────────────────────────
+    const precip = Number(cur.precipitation);
+    const precipEl = document.getElementById('precip');
+    precipEl.textContent = isFinite(precip) ? precip.toFixed(1) : '–';
+    const precipUnit = document.createElement('span');
+    precipUnit.className = 'stat-unit';
+    precipUnit.textContent = ' mm';
+    precipEl.appendChild(precipUnit);
+    document.getElementById('precip-sub').textContent =
+      isFinite(precip) ? (precip === 0 ? 'No precipitation' : 'Last hour') : '';
+
+    // ── Sunset & Sunrise ──────────────────────────
+    const sunsetRaw  = wxData.daily?.sunset?.[0]  ?? '';
+    const sunriseRaw = wxData.daily?.sunrise?.[0] ?? '';
+    document.getElementById('sunset').textContent    = parseDailyTime(sunsetRaw);
+    document.getElementById('sunrise-sub').textContent =
+      sunriseRaw ? `Sunrise ${parseDailyTime(sunriseRaw)}` : '';
+
+    // ── Today's High / Low ────────────────────────
+    const todayHigh = Math.round(Number(wxData.daily?.temperature_2m_max?.[0]));
+    const todayLow  = Math.round(Number(wxData.daily?.temperature_2m_min?.[0]));
+    document.getElementById('avg-high').textContent = isFinite(todayHigh) ? `${todayHigh}°` : '–°';
+    document.getElementById('avg-low').textContent  = isFinite(todayLow)  ? `${todayLow}°`  : '–°';
+
     renderForecast(wxData.daily);
 
     // Start live clock in the city's local timezone
