@@ -508,7 +508,9 @@
     if (!isFinite(temp) || !isFinite(humidity) || !isFinite(wind)) {
       throw new Error('Unexpected API response format.');
     }
-    const [condLabel, condIcon] = getCondition(Number(cur.weather_code));
+    // is_day: 1 = daytime, 0 = night — validate as integer before use
+    const isDay = Number(cur.is_day) === 1;
+    const [condLabel, condIcon] = getCondition(Number(cur.weather_code), isDay);
 
     document.getElementById('city-name').textContent = cityLabel;
     document.getElementById('country').textContent   = countryLabel;
