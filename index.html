@@ -321,6 +321,34 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .conv-btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 10px;
+      background: #7c5cbf;
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .conv-btn:hover { background: #9370db; }
+
+    .currency-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.12);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.8);
+      vertical-align: middle;
+    }
+
     /* ── Currency widget — bottom-left ────────────── */
     .currency-widget {
       position: fixed;
@@ -481,6 +509,29 @@
 </head>
 <body>
 
+<!-- Currency converter — bottom-left corner -->
+<div class="currency-widget" id="currency-widget">
+  <div class="currency-header">
+    <div class="currency-flag" id="curr-flag"></div>
+    <div>
+      <div class="currency-code" id="curr-code">—</div>
+      <div class="currency-name" id="curr-name"></div>
+    </div>
+  </div>
+  <div class="currency-sep"></div>
+  <div class="converter-label">Convert</div>
+  <div class="converter-row">
+    <input type="number" class="conv-input" id="conv-amount" value="1" min="0" step="any" />
+    <select class="conv-select" id="conv-from"></select>
+    <span class="conv-arrow">→</span>
+    <select class="conv-select" id="conv-to"></select>
+    <button class="conv-swap" id="conv-swap" title="Swap">⇅</button>
+  </div>
+  <button class="conv-btn" id="conv-btn">Convert</button>
+  <div class="conv-result" id="conv-result"></div>
+  <div class="conv-result-label" id="conv-rate"></div>
+</div>
+
 <!-- Local-time clock — top-right corner -->
 <div class="clock-widget" id="clock-widget">
   <div class="clock-time" id="clock-time"></div>
@@ -559,42 +610,8 @@
   </div>
 </div>
 
+<script src="src/utils.js"></script>
 <script>
-  // Each entry: [label, day icon, night icon]
-  const WMO_CODES = {
-    0:  ['Clear sky',              '☀️',  '🌙'],
-    1:  ['Mainly clear',           '🌤️', '🌙'],
-    2:  ['Partly cloudy',          '⛅',  '🌙'],
-    3:  ['Overcast',               '☁️',  '☁️'],
-    45: ['Foggy',                  '🌫️', '🌫️'],
-    48: ['Icy fog',                '🌫️', '🌫️'],
-    51: ['Light drizzle',          '🌦️', '🌧️'],
-    53: ['Moderate drizzle',       '🌦️', '🌧️'],
-    55: ['Dense drizzle',          '🌧️', '🌧️'],
-    61: ['Slight rain',            '🌧️', '🌧️'],
-    63: ['Moderate rain',          '🌧️', '🌧️'],
-    65: ['Heavy rain',             '🌧️', '🌧️'],
-    71: ['Slight snow',            '🌨️', '🌨️'],
-    73: ['Moderate snow',          '❄️',  '❄️'],
-    75: ['Heavy snow',             '❄️',  '❄️'],
-    77: ['Snow grains',            '🌨️', '🌨️'],
-    80: ['Slight showers',         '🌦️', '🌧️'],
-    81: ['Moderate showers',       '🌧️', '🌧️'],
-    82: ['Violent showers',        '⛈️',  '⛈️'],
-    85: ['Snow showers',           '🌨️', '🌨️'],
-    86: ['Heavy snow showers',     '❄️',  '❄️'],
-    95: ['Thunderstorm',           '⛈️',  '⛈️'],
-    96: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
-    99: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
-  };
-
-  // isDay=true → daytime icon, isDay=false → night icon
-  // Forecast rows always use daytime (isDay defaults to true)
-  function getCondition(code, isDay = true) {
-    const entry = WMO_CODES[code] ?? ['Unknown', '🌡️', '🌡️'];
-    return [entry[0], isDay ? entry[1] : entry[2]];
-  }
-
   const input       = document.getElementById('city-input');
   const btn         = document.getElementById('search-btn');
   const locBtn      = document.getElementById('loc-btn');
@@ -702,25 +719,7 @@
     }
   }
 
-  // UV Index → risk label + CSS class (WHO scale)
-  function uvRisk(uv) {
-    if (uv <= 2)  return ['Low',       'uv-low'];
-    if (uv <= 5)  return ['Moderate',  'uv-moderate'];
-    if (uv <= 7)  return ['High',      'uv-high'];
-    if (uv <= 10) return ['Very High', 'uv-veryhigh'];
-    return            ['Extreme',    'uv-extreme'];
-  }
-
-  // Safely parse "YYYY-MM-DDTHH:MM" (no tz offset) → "H:MM AM/PM"
-  function parseDailyTime(isoStr) {
-    const match = String(isoStr).match(/T(\d{2}):(\d{2})$/);
-    if (!match) return '–';
-    const h = parseInt(match[1], 10);
-    const m = match[2];
-    return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
-  }
-
-  async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel) {
+  async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel, countryCode = '') {
     const wxRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
       `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day,uv_index,precipitation` +
@@ -813,6 +812,7 @@
 
     loading.classList.remove('visible');
     card.classList.add('visible');
+    showCurrencyWidget(countryLabel, countryCode);
   }
 
   async function fetchWeather() {
@@ -828,8 +828,8 @@
         showError('City not found. Try a different spelling.');
         return;
       }
-      const { name, country, latitude, longitude } = geoData.results[0];
-      await fetchWeatherByCoords(latitude, longitude, name, country);
+      const { name, country, country_code, latitude, longitude } = geoData.results[0];
+      await fetchWeatherByCoords(latitude, longitude, name, country, country_code);
       setCityBackground(name);
     } catch {
       showError('Network error. Please check your connection and try again.');
@@ -850,10 +850,11 @@
           `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
         );
         const revData = await revRes.json();
-        const city    = revData.address?.city || revData.address?.town || revData.address?.village || 'My Location';
-        const country = revData.address?.country || '';
+        const city        = revData.address?.city || revData.address?.town || revData.address?.village || 'My Location';
+        const country     = revData.address?.country || '';
+        const countryCode = (revData.address?.country_code || '').toUpperCase();
         input.value = city;
-        await fetchWeatherByCoords(latitude, longitude, city, country);
+        await fetchWeatherByCoords(latitude, longitude, city, country, countryCode);
         setCityBackground(city);
       } catch {
         showError('Could not retrieve location weather. Please try again.');
@@ -864,15 +865,6 @@
       showError('Location access denied. Please search by city name.');
       locBtn.disabled = false;
     });
-  }
-
-  function isSafeImageUrl(url) {
-    // Only allow HTTPS URLs pointing to Wikimedia image servers
-    try {
-      const u = new URL(url);
-      return u.protocol === 'https:' &&
-             (u.hostname.endsWith('.wikimedia.org') || u.hostname.endsWith('.wikipedia.org'));
-    } catch { return false; }
   }
 
   async function setCityBackground(cityName) {
@@ -894,6 +886,81 @@
       // silently fail — keep gradient
     }
   }
+
+  // ── Currency converter ────────────────────────────
+  function populateCurrencySelects(fromCode) {
+    const fromSel = document.getElementById('conv-from');
+    const toSel   = document.getElementById('conv-to');
+    const prevTo  = toSel.value || 'USD';
+    fromSel.textContent = '';
+    toSel.textContent   = '';
+    const allCodes = CURRENCIES.includes(fromCode)
+      ? CURRENCIES
+      : [fromCode, ...CURRENCIES];
+    allCodes.forEach(c => {
+      const label = `${c} – ${CURRENCY_NAMES[c] || c}`;
+      const toSelected = c === prevTo && prevTo !== fromCode
+        ? true
+        : (prevTo === fromCode && c === 'USD');
+
+      const optFrom = document.createElement('option');
+      optFrom.value    = c;
+      optFrom.selected = c === fromCode;
+      optFrom.textContent = label;
+      fromSel.appendChild(optFrom);
+
+      const optTo = document.createElement('option');
+      optTo.value    = c;
+      optTo.selected = toSelected;
+      optTo.textContent = label;
+      toSel.appendChild(optTo);
+    });
+  }
+
+  async function convertCurrency() {
+    const amount  = parseFloat(document.getElementById('conv-amount').value);
+    const from    = document.getElementById('conv-from').value;
+    const to      = document.getElementById('conv-to').value;
+    const resultEl = document.getElementById('conv-result');
+    const rateEl   = document.getElementById('conv-rate');
+    if (!amount || isNaN(amount) || from === to) {
+      resultEl.textContent = from === to ? `${amount} ${from}` : '—';
+      rateEl.textContent = '';
+      return;
+    }
+    resultEl.textContent = '…';
+    rateEl.textContent   = '';
+    try {
+      const res  = await fetch(`https://api.frankfurter.app/latest?from=${from}&to=${to}`);
+      const data = await res.json();
+      const r    = data.rates[to];
+      if (!r) throw new Error();
+      const converted = (amount * r).toLocaleString('en', { maximumFractionDigits: 2 });
+      resultEl.textContent = `${amount.toLocaleString('en')} ${from} = ${converted} ${to}`;
+      rateEl.textContent   = `1 ${from} = ${r.toFixed(4)} ${to}`;
+    } catch {
+      resultEl.textContent = 'Rate unavailable';
+    }
+  }
+
+  function showCurrencyWidget(countryLabel, countryCode) {
+    const currency = COUNTRY_CURRENCY[countryLabel] || null;
+    document.getElementById('curr-flag').textContent = countryFlag(countryCode);
+    document.getElementById('curr-code').textContent = currency || '—';
+    document.getElementById('curr-name').textContent = currency ? (CURRENCY_NAMES[currency] || '') : 'Unknown currency';
+    populateCurrencySelects(currency || 'USD');
+    document.getElementById('conv-result').textContent = '';
+    document.getElementById('conv-rate').textContent   = '';
+    document.getElementById('currency-widget').classList.add('visible');
+  }
+
+  document.getElementById('conv-btn').addEventListener('click', convertCurrency);
+  document.getElementById('conv-amount').addEventListener('keydown', e => { if (e.key === 'Enter') convertCurrency(); });
+  document.getElementById('conv-swap').addEventListener('click', () => {
+    const fromSel = document.getElementById('conv-from');
+    const toSel   = document.getElementById('conv-to');
+    [fromSel.value, toSel.value] = [toSel.value, fromSel.value];
+  });
 
   btn.addEventListener('click', fetchWeather);
   locBtn.addEventListener('click', fetchWeatherByLocation);
