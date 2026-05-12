@@ -954,37 +954,51 @@
     });
   }
 
+  // Fetch the hero image from a Wikipedia article by title. Returns null on failure.
+  async function fetchWikipediaImage(title) {
+    try {
+      const res = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const url = data.originalimage?.source || data.thumbnail?.source;
+      return url && isSafeImageUrl(url) ? url : null;
+    } catch { return null; }
+  }
+
+  // Search Wikimedia Commons for a night photo. Returns null if nothing suitable found.
+  async function fetchCommonsNightPhoto(cityName) {
+    try {
+      const res = await fetch(
+        `https://commons.wikimedia.org/w/api.php?action=query&generator=search` +
+        `&gsrsearch=${encodeURIComponent(cityName + ' night')}&gsrnamespace=6&gsrlimit=20` +
+        `&prop=imageinfo&iiprop=url&format=json&origin=*`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const pages = Object.values(data.query?.pages ?? {});
+      for (const page of pages) {
+        const url = page.imageinfo?.[0]?.url ?? '';
+        if (isSafeImageUrl(url) && /\.(jpe?g|png)$/i.test(url)) return url;
+      }
+      return null;
+    } catch { return null; }
+  }
+
   async function setCityBackground(cityName) {
     const isNight = document.body.classList.contains('is-night');
     try {
       let imgUrl;
 
       if (!isNight) {
-        // Day: Wikipedia article photo
-        const res = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        imgUrl = data.originalimage?.source || data.thumbnail?.source;
+        imgUrl = await fetchWikipediaImage(cityName);
       } else {
-        // Night: Wikimedia Commons search for an actual night skyline photo
-        const res = await fetch(
-          `https://commons.wikimedia.org/w/api.php?action=query&generator=search` +
-          `&gsrsearch=${encodeURIComponent(cityName + ' night skyline')}&gsrnamespace=6&gsrlimit=10` +
-          `&prop=imageinfo&iiprop=url&format=json&origin=*`
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const pages = Object.values(data.query?.pages ?? {});
-        for (const page of pages) {
-          const url = page.imageinfo?.[0]?.url ?? '';
-          // Only accept JPEG/PNG photos, skip maps, diagrams, SVGs
-          if (isSafeImageUrl(url) && /\.(jpe?g|png)$/i.test(url)) {
-            imgUrl = url;
-            break;
-          }
-        }
+        // Waterfall: article "at night" → "skyline" article → Commons search → day fallback
+        imgUrl = await fetchWikipediaImage(cityName + ' at night')
+              || await fetchWikipediaImage(cityName + ' skyline')
+              || await fetchCommonsNightPhoto(cityName)
+              || await fetchWikipediaImage(cityName);
       }
 
       if (!imgUrl || !isSafeImageUrl(imgUrl)) return;
