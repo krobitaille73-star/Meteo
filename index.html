@@ -8,7 +8,7 @@
     default-src 'none';
     script-src 'unsafe-inline';
     style-src 'unsafe-inline';
-    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org https://api.frankfurter.app;
+    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org https://open.er-api.com;
     img-src https://upload.wikimedia.org https://maps.wikimedia.org data:;
   " />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -1008,9 +1008,9 @@
     resultEl.textContent = '…';
     rateEl.textContent   = '';
     try {
-      const res  = await fetch(`https://api.frankfurter.app/latest?from=${from}&to=${to}`);
+      const res  = await fetch(`https://open.er-api.com/v6/latest/${from}`);
       const data = await res.json();
-      const r    = data.rates[to];
+      const r    = data.rates?.[to];
       if (!r) throw new Error();
       const converted = (amount * r).toLocaleString('en', { maximumFractionDigits: 2 });
       resultEl.textContent = `${amount.toLocaleString('en')} ${from} = ${converted} ${to}`;
