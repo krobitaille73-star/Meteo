@@ -43,11 +43,11 @@
       z-index: 0;
     }
 
-    .container { position: relative; z-index: 1; }
-
     .container {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 480px;
+      max-width: 1040px;
     }
 
     h1 {
@@ -115,54 +115,82 @@
     .card {
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 24px;
-      padding: 36px 32px;
-      backdrop-filter: blur(12px);
+      border-radius: 28px;
+      padding: 40px 44px;
+      backdrop-filter: blur(16px);
       display: none;
+      flex-direction: column;
+      gap: 32px;
       animation: fadeUp 0.35s ease;
     }
-    .card.visible { display: block; }
+    .card.visible { display: flex; }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* ── Horizontal main row ── */
+    .card-main {
+      display: flex;
+      gap: 0;
+      align-items: stretch;
+    }
+
+    /* Left panel — city + temperature */
+    .card-left {
+      flex: 0 0 300px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-right: 40px;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+
     .city-name {
-      font-size: 1.6rem;
+      font-size: 2rem;
       font-weight: 700;
-      margin-bottom: 4px;
+      line-height: 1.1;
     }
     .country {
-      font-size: 0.9rem;
-      color: rgba(255,255,255,0.5);
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.45);
+      margin-top: 4px;
       margin-bottom: 28px;
     }
 
     .main-temp {
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 10px;
+      gap: 12px;
+      margin-bottom: 8px;
     }
-    .temp-icon { font-size: 4rem; line-height: 1; }
+    .temp-icon { font-size: 4.5rem; line-height: 1; }
     .temp-value {
-      font-size: 5rem;
-      font-weight: 300;
+      font-size: 5.5rem;
+      font-weight: 200;
       line-height: 1;
     }
     .temp-value sup { font-size: 2rem; font-weight: 400; vertical-align: super; }
 
     .condition {
-      font-size: 1.1rem;
-      color: rgba(255,255,255,0.7);
-      margin-bottom: 32px;
+      font-size: 1rem;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.04em;
+    }
+
+    /* Right panel — stats */
+    .card-right {
+      flex: 1;
+      padding-left: 40px;
     }
 
     .stats {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 14px;
+      height: 100%;
+      align-content: center;
     }
 
     .stat {
@@ -224,7 +252,6 @@
     .avg-low  { font-size: 1.1rem; font-weight: 500; color: #93c5fd; }
 
     .forecast {
-      margin-top: 24px;
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 8px;
@@ -364,47 +391,61 @@
   <div class="loading" id="loading"><span class="spinner"></span>Fetching weather…</div>
 
   <div class="card" id="weather-card">
-    <div class="city-name" id="city-name"></div>
-    <div class="country" id="country"></div>
-    <div class="main-temp">
-      <div class="temp-icon" id="temp-icon"></div>
-      <div class="temp-value" id="temp-value"><sup>°C</sup></div>
-    </div>
-    <div class="condition" id="condition"></div>
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-label">Humidity</div>
-        <div class="stat-value" id="humidity">–<span class="stat-unit"> %</span></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Wind Speed</div>
-        <div class="stat-value" id="wind">–<span class="stat-unit"> km/h</span></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">UV Index</div>
-        <div class="stat-value" id="uv-value">–</div>
-        <div id="uv-badge"></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Precipitation</div>
-        <div class="stat-value" id="precip">–<span class="stat-unit"> mm</span></div>
-        <div class="stat-sub" id="precip-sub"></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Sunset</div>
-        <div class="stat-value" id="sunset">–</div>
-        <div class="stat-sub" id="sunrise-sub"></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Today's Range</div>
-        <div class="avg-row">
-          <span class="avg-high" id="avg-high">–°</span>
-          <span class="avg-low"  id="avg-low">–°</span>
+
+    <!-- Horizontal main row: city/temp LEFT · stats RIGHT -->
+    <div class="card-main">
+
+      <div class="card-left">
+        <div class="city-name" id="city-name"></div>
+        <div class="country"   id="country"></div>
+        <div class="main-temp">
+          <div class="temp-icon"  id="temp-icon"></div>
+          <div class="temp-value" id="temp-value"><sup>°C</sup></div>
         </div>
-        <div class="stat-sub">High · Low</div>
+        <div class="condition" id="condition"></div>
       </div>
-    </div>
+
+      <div class="card-right">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Humidity</div>
+            <div class="stat-value" id="humidity">–<span class="stat-unit"> %</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Wind Speed</div>
+            <div class="stat-value" id="wind">–<span class="stat-unit"> km/h</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">UV Index</div>
+            <div class="stat-value" id="uv-value">–</div>
+            <div id="uv-badge"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Precipitation</div>
+            <div class="stat-value" id="precip">–<span class="stat-unit"> mm</span></div>
+            <div class="stat-sub" id="precip-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Sunset</div>
+            <div class="stat-value" id="sunset">–</div>
+            <div class="stat-sub" id="sunrise-sub"></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Today's Range</div>
+            <div class="avg-row">
+              <span class="avg-high" id="avg-high">–°</span>
+              <span class="avg-low"  id="avg-low">–°</span>
+            </div>
+            <div class="stat-sub">High · Low</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.card-main -->
+
+    <!-- 7-day forecast — full width below -->
     <div class="forecast" id="forecast"></div>
+
   </div>
 </div>
 
