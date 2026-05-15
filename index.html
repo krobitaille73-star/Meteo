@@ -8,7 +8,7 @@
     default-src 'none';
     script-src 'unsafe-inline';
     style-src 'unsafe-inline';
-    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org https://api.frankfurter.app;
+    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org https://open.er-api.com;
     img-src https://upload.wikimedia.org https://maps.wikimedia.org data:;
   " />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -321,17 +321,45 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Currency widget — bottom-left ────────────── */
+    .conv-btn {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 10px;
+      background: #7c5cbf;
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .conv-btn:hover { background: #9370db; }
+
+    .currency-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.12);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.8);
+      vertical-align: middle;
+    }
+
+    /* ── Currency widget — top-left ─────────────── */
     .currency-widget {
       position: fixed;
-      bottom: 24px;
+      top: 24px;
       left: 28px;
       z-index: 10;
-      width: 300px;
+      width: 420px;
       background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.13);
-      border-radius: 20px;
-      padding: 18px 20px;
+      border-radius: 16px;
+      padding: 10px 14px;
       backdrop-filter: blur(14px);
       display: none;
       animation: fadeUp 0.35s ease;
@@ -341,104 +369,72 @@
     .currency-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
+      gap: 8px;
+      margin-bottom: 6px;
     }
-    .currency-flag { font-size: 2rem; line-height: 1; flex-shrink: 0; }
-    .currency-code {
-      font-size: 1.3rem;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .currency-name {
-      font-size: 0.72rem;
-      color: rgba(255,255,255,0.5);
-      margin-top: 3px;
-    }
+    .currency-flag { font-size: 1.2rem; line-height: 1; flex-shrink: 0; }
+    .currency-code { font-size: 0.9rem; font-weight: 700; line-height: 1; }
+    .currency-name { font-size: 0.68rem; color: rgba(255,255,255,0.5); margin-top: 1px; }
 
-    .currency-sep {
-      height: 1px;
-      background: rgba(255,255,255,0.1);
-      margin-bottom: 14px;
-    }
-
-    .converter-label {
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: rgba(255,255,255,0.4);
-      margin-bottom: 8px;
-    }
+    .currency-sep { display: none; }
+    .converter-label { display: none; }
 
     .converter-row {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-bottom: 10px;
+      gap: 5px;
+      margin-bottom: 5px;
     }
     .conv-input {
-      width: 72px;
-      padding: 7px 8px;
+      width: 64px;
+      padding: 5px 7px;
       border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 10px;
+      border-radius: 8px;
       background: rgba(255,255,255,0.08);
       color: #fff;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       outline: none;
       min-width: 0;
     }
     .conv-input:focus { border-color: rgba(255,255,255,0.35); }
     .conv-select {
       flex: 1;
-      padding: 7px 4px;
+      padding: 5px 4px;
       border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 10px;
+      border-radius: 8px;
       background: rgba(30,20,60,0.85);
       color: #fff;
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       outline: none;
       cursor: pointer;
       min-width: 0;
     }
     .conv-select:focus { border-color: rgba(255,255,255,0.35); }
-    .conv-arrow {
-      font-size: 0.9rem;
-      color: rgba(255,255,255,0.4);
-      flex-shrink: 0;
-    }
+    .conv-arrow { font-size: 0.85rem; color: rgba(255,255,255,0.4); flex-shrink: 0; }
     .conv-swap {
       background: none;
       border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 8px;
+      border-radius: 7px;
       color: rgba(255,255,255,0.6);
-      font-size: 0.85rem;
-      padding: 5px 7px;
+      font-size: 0.8rem;
+      padding: 3px 5px;
       cursor: pointer;
       flex-shrink: 0;
       transition: background 0.2s;
     }
     .conv-swap:hover { background: rgba(255,255,255,0.1); }
 
-    .conv-result {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #a78bfa;
-      min-height: 1.4em;
-    }
-    .conv-result-label {
-      font-size: 0.68rem;
-      color: rgba(255,255,255,0.35);
-      margin-top: 2px;
-    }
+    .conv-result { font-size: 0.88rem; font-weight: 600; color: #a78bfa; }
+    .conv-result-label { font-size: 0.64rem; color: rgba(255,255,255,0.35); margin-top: 1px; }
 
-    /* ── Local-time clock ─────────────────────────── */
+    /* ── Local-time clock — top-right ───────────── */
     .clock-widget {
       position: fixed;
       top: 24px;
       right: 28px;
       z-index: 10;
       text-align: right;
-      display: none; /* hidden until a city is loaded */
+      display: none;
     }
     .clock-widget.visible { display: block; }
 
@@ -480,6 +476,29 @@
   </style>
 </head>
 <body>
+
+<!-- Currency converter — top-left corner -->
+<div class="currency-widget" id="currency-widget">
+  <div class="currency-header">
+    <div class="currency-flag" id="curr-flag"></div>
+    <div>
+      <div class="currency-code" id="curr-code">—</div>
+      <div class="currency-name" id="curr-name"></div>
+    </div>
+  </div>
+  <div class="currency-sep"></div>
+  <div class="converter-label">Convert</div>
+  <div class="converter-row">
+    <input type="number" class="conv-input" id="conv-amount" value="1" min="0" step="any" />
+    <select class="conv-select" id="conv-from"></select>
+    <span class="conv-arrow">→</span>
+    <select class="conv-select" id="conv-to"></select>
+    <button class="conv-swap" id="conv-swap" title="Swap">⇅</button>
+  </div>
+  <button class="conv-btn" id="conv-btn">Convert</button>
+  <div class="conv-result" id="conv-result"></div>
+  <div class="conv-result-label" id="conv-rate"></div>
+</div>
 
 <!-- Local-time clock — top-right corner -->
 <div class="clock-widget" id="clock-widget">
@@ -560,7 +579,8 @@
 </div>
 
 <script>
-  // Each entry: [label, day icon, night icon]
+  // ── Utility functions (mirrored in src/utils.js for the test suite) ──────
+
   const WMO_CODES = {
     0:  ['Clear sky',              '☀️',  '🌙'],
     1:  ['Mainly clear',           '🌤️', '🌙'],
@@ -588,12 +608,86 @@
     99: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
   };
 
-  // isDay=true → daytime icon, isDay=false → night icon
-  // Forecast rows always use daytime (isDay defaults to true)
   function getCondition(code, isDay = true) {
     const entry = WMO_CODES[code] ?? ['Unknown', '🌡️', '🌡️'];
     return [entry[0], isDay ? entry[1] : entry[2]];
   }
+
+  function uvRisk(uv) {
+    if (uv <= 2)  return ['Low',       'uv-low'];
+    if (uv <= 5)  return ['Moderate',  'uv-moderate'];
+    if (uv <= 7)  return ['High',      'uv-high'];
+    if (uv <= 10) return ['Very High', 'uv-veryhigh'];
+    return              ['Extreme',   'uv-extreme'];
+  }
+
+  function parseDailyTime(isoStr) {
+    const match = String(isoStr).match(/T(\d{2}):(\d{2})$/);
+    if (!match) return '–';
+    const h = parseInt(match[1], 10);
+    const m = match[2];
+    return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+
+  function countryFlag(code) {
+    if (!code || code.length !== 2) return '🌐';
+    return [...code.toUpperCase()].map(c =>
+      String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)
+    ).join('');
+  }
+
+  function isSafeImageUrl(url) {
+    if (typeof url !== 'string' || /[\r\n\t\0]/.test(url)) return false;
+    try {
+      const u = new URL(url);
+      return u.protocol === 'https:' &&
+             (u.hostname.endsWith('.wikimedia.org') ||
+              u.hostname.endsWith('.wikipedia.org'));
+    } catch { return false; }
+  }
+
+  const COUNTRY_CURRENCY = {
+    'Afghanistan':'AFN','Albania':'ALL','Algeria':'DZD','Argentina':'ARS',
+    'Australia':'AUD','Austria':'EUR','Bangladesh':'BDT','Belgium':'EUR',
+    'Bolivia':'BOB','Brazil':'BRL','Bulgaria':'BGN','Canada':'CAD',
+    'Chile':'CLP','China':'CNY','Colombia':'COP','Croatia':'EUR',
+    'Czech Republic':'CZK','Czechia':'CZK','Denmark':'DKK','Ecuador':'USD',
+    'Egypt':'EGP','Estonia':'EUR','Ethiopia':'ETB','Finland':'EUR',
+    'France':'EUR','Germany':'EUR','Ghana':'GHS','Greece':'EUR',
+    'Guatemala':'GTQ','Hong Kong':'HKD','Hungary':'HUF','Iceland':'ISK',
+    'India':'INR','Indonesia':'IDR','Iran':'IRR','Iraq':'IQD',
+    'Ireland':'EUR','Israel':'ILS','Italy':'EUR','Jamaica':'JMD',
+    'Japan':'JPY','Jordan':'JOD','Kazakhstan':'KZT','Kenya':'KES',
+    'Kuwait':'KWD','Latvia':'EUR','Lebanon':'LBP','Lithuania':'EUR',
+    'Luxembourg':'EUR','Malaysia':'MYR','Mexico':'MXN','Morocco':'MAD',
+    'Netherlands':'EUR','New Zealand':'NZD','Nigeria':'NGN','Norway':'NOK',
+    'Pakistan':'PKR','Peru':'PEN','Philippines':'PHP','Poland':'PLN',
+    'Portugal':'EUR','Qatar':'QAR','Romania':'RON','Russia':'RUB',
+    'Saudi Arabia':'SAR','Singapore':'SGD','Slovakia':'EUR','Slovenia':'EUR',
+    'South Africa':'ZAR','South Korea':'KRW','Spain':'EUR','Sweden':'SEK',
+    'Switzerland':'CHF','Taiwan':'TWD','Thailand':'THB','Turkey':'TRY',
+    'Türkiye':'TRY','Ukraine':'UAH','United Arab Emirates':'AED',
+    'United Kingdom':'GBP','United States':'USD','United States of America':'USD',
+    'Uruguay':'UYU','Venezuela':'VES','Vietnam':'VND',
+  };
+
+  const CURRENCY_NAMES = {
+    AED:'UAE Dirham',AUD:'Australian Dollar',BGN:'Bulgarian Lev',
+    BRL:'Brazilian Real',CAD:'Canadian Dollar',CHF:'Swiss Franc',
+    CNY:'Chinese Yuan',CZK:'Czech Koruna',DKK:'Danish Krone',
+    EUR:'Euro',GBP:'British Pound',HKD:'Hong Kong Dollar',
+    HUF:'Hungarian Forint',IDR:'Indonesian Rupiah',ILS:'Israeli Shekel',
+    INR:'Indian Rupee',ISK:'Icelandic Króna',JPY:'Japanese Yen',
+    KRW:'South Korean Won',MXN:'Mexican Peso',MYR:'Malaysian Ringgit',
+    NOK:'Norwegian Krone',NZD:'New Zealand Dollar',PHP:'Philippine Peso',
+    PLN:'Polish Złoty',RON:'Romanian Leu',SEK:'Swedish Krona',
+    SGD:'Singapore Dollar',THB:'Thai Baht',TRY:'Turkish Lira',
+    USD:'US Dollar',ZAR:'South African Rand',
+  };
+
+  const CURRENCIES = Object.keys(CURRENCY_NAMES).sort();
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const input       = document.getElementById('city-input');
   const btn         = document.getElementById('search-btn');
@@ -702,25 +796,7 @@
     }
   }
 
-  // UV Index → risk label + CSS class (WHO scale)
-  function uvRisk(uv) {
-    if (uv <= 2)  return ['Low',       'uv-low'];
-    if (uv <= 5)  return ['Moderate',  'uv-moderate'];
-    if (uv <= 7)  return ['High',      'uv-high'];
-    if (uv <= 10) return ['Very High', 'uv-veryhigh'];
-    return            ['Extreme',    'uv-extreme'];
-  }
-
-  // Safely parse "YYYY-MM-DDTHH:MM" (no tz offset) → "H:MM AM/PM"
-  function parseDailyTime(isoStr) {
-    const match = String(isoStr).match(/T(\d{2}):(\d{2})$/);
-    if (!match) return '–';
-    const h = parseInt(match[1], 10);
-    const m = match[2];
-    return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
-  }
-
-  async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel) {
+  async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel, countryCode = '') {
     const wxRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
       `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day,uv_index,precipitation` +
@@ -813,6 +889,7 @@
 
     loading.classList.remove('visible');
     card.classList.add('visible');
+    showCurrencyWidget(countryLabel, countryCode);
   }
 
   async function fetchWeather() {
@@ -828,8 +905,8 @@
         showError('City not found. Try a different spelling.');
         return;
       }
-      const { name, country, latitude, longitude } = geoData.results[0];
-      await fetchWeatherByCoords(latitude, longitude, name, country);
+      const { name, country, country_code, latitude, longitude } = geoData.results[0];
+      await fetchWeatherByCoords(latitude, longitude, name, country, country_code);
       setCityBackground(name);
     } catch {
       showError('Network error. Please check your connection and try again.');
@@ -850,10 +927,11 @@
           `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
         );
         const revData = await revRes.json();
-        const city    = revData.address?.city || revData.address?.town || revData.address?.village || 'My Location';
-        const country = revData.address?.country || '';
+        const city        = revData.address?.city || revData.address?.town || revData.address?.village || 'My Location';
+        const country     = revData.address?.country || '';
+        const countryCode = (revData.address?.country_code || '').toUpperCase();
         input.value = city;
-        await fetchWeatherByCoords(latitude, longitude, city, country);
+        await fetchWeatherByCoords(latitude, longitude, city, country, countryCode);
         setCityBackground(city);
       } catch {
         showError('Could not retrieve location weather. Please try again.');
@@ -864,15 +942,6 @@
       showError('Location access denied. Please search by city name.');
       locBtn.disabled = false;
     });
-  }
-
-  function isSafeImageUrl(url) {
-    // Only allow HTTPS URLs pointing to Wikimedia image servers
-    try {
-      const u = new URL(url);
-      return u.protocol === 'https:' &&
-             (u.hostname.endsWith('.wikimedia.org') || u.hostname.endsWith('.wikipedia.org'));
-    } catch { return false; }
   }
 
   async function setCityBackground(cityName) {
@@ -894,6 +963,81 @@
       // silently fail — keep gradient
     }
   }
+
+  // ── Currency converter ────────────────────────────
+  function populateCurrencySelects(fromCode) {
+    const fromSel = document.getElementById('conv-from');
+    const toSel   = document.getElementById('conv-to');
+    const prevTo  = toSel.value || 'USD';
+    fromSel.textContent = '';
+    toSel.textContent   = '';
+    const allCodes = CURRENCIES.includes(fromCode)
+      ? CURRENCIES
+      : [fromCode, ...CURRENCIES];
+    allCodes.forEach(c => {
+      const label = `${c} – ${CURRENCY_NAMES[c] || c}`;
+      const toSelected = c === prevTo && prevTo !== fromCode
+        ? true
+        : (prevTo === fromCode && c === 'USD');
+
+      const optFrom = document.createElement('option');
+      optFrom.value    = c;
+      optFrom.selected = c === fromCode;
+      optFrom.textContent = label;
+      fromSel.appendChild(optFrom);
+
+      const optTo = document.createElement('option');
+      optTo.value    = c;
+      optTo.selected = toSelected;
+      optTo.textContent = label;
+      toSel.appendChild(optTo);
+    });
+  }
+
+  async function convertCurrency() {
+    const amount  = parseFloat(document.getElementById('conv-amount').value);
+    const from    = document.getElementById('conv-from').value;
+    const to      = document.getElementById('conv-to').value;
+    const resultEl = document.getElementById('conv-result');
+    const rateEl   = document.getElementById('conv-rate');
+    if (!amount || isNaN(amount) || from === to) {
+      resultEl.textContent = from === to ? `${amount} ${from}` : '—';
+      rateEl.textContent = '';
+      return;
+    }
+    resultEl.textContent = '…';
+    rateEl.textContent   = '';
+    try {
+      const res  = await fetch(`https://open.er-api.com/v6/latest/${from}`);
+      const data = await res.json();
+      const r    = data.rates?.[to];
+      if (!r) throw new Error();
+      const converted = (amount * r).toLocaleString('en', { maximumFractionDigits: 2 });
+      resultEl.textContent = `${amount.toLocaleString('en')} ${from} = ${converted} ${to}`;
+      rateEl.textContent   = `1 ${from} = ${r.toFixed(4)} ${to}`;
+    } catch {
+      resultEl.textContent = 'Rate unavailable';
+    }
+  }
+
+  function showCurrencyWidget(countryLabel, countryCode) {
+    const currency = COUNTRY_CURRENCY[countryLabel] || null;
+    document.getElementById('curr-flag').textContent = countryFlag(countryCode);
+    document.getElementById('curr-code').textContent = currency || '—';
+    document.getElementById('curr-name').textContent = currency ? (CURRENCY_NAMES[currency] || '') : 'Unknown currency';
+    populateCurrencySelects(currency || 'USD');
+    document.getElementById('conv-result').textContent = '';
+    document.getElementById('conv-rate').textContent   = '';
+    document.getElementById('currency-widget').classList.add('visible');
+  }
+
+  document.getElementById('conv-btn').addEventListener('click', convertCurrency);
+  document.getElementById('conv-amount').addEventListener('keydown', e => { if (e.key === 'Enter') convertCurrency(); });
+  document.getElementById('conv-swap').addEventListener('click', () => {
+    const fromSel = document.getElementById('conv-from');
+    const toSel   = document.getElementById('conv-to');
+    [fromSel.value, toSel.value] = [toSel.value, fromSel.value];
+  });
 
   btn.addEventListener('click', fetchWeather);
   locBtn.addEventListener('click', fetchWeatherByLocation);
