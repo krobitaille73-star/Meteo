@@ -162,30 +162,66 @@
     .stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 14px;
     }
 
     .stat {
       background: rgba(255,255,255,0.07);
       border-radius: 16px;
-      padding: 18px 20px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
     .stat-label {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       color: rgba(255,255,255,0.45);
-      margin-bottom: 8px;
     }
     .stat-value {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 600;
+      line-height: 1;
     }
     .stat-unit {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: 400;
       color: rgba(255,255,255,0.6);
     }
+    .stat-sub {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+
+    /* UV risk badge */
+    .uv-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #000;
+      margin-top: 4px;
+      width: fit-content;
+    }
+    .uv-low      { background: #4ade80; }
+    .uv-moderate { background: #fbbf24; }
+    .uv-high     { background: #fb923c; }
+    .uv-veryhigh { background: #f87171; color: #fff; }
+    .uv-extreme  { background: #c084fc; color: #fff; }
+
+    /* Avg temp row */
+    .avg-row {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .avg-high { font-size: 1.5rem; font-weight: 700; color: #fb923c; }
+    .avg-low  { font-size: 1.1rem; font-weight: 500; color: #93c5fd; }
 
     .forecast {
       margin-top: 24px;
@@ -344,6 +380,29 @@
         <div class="stat-label">Wind Speed</div>
         <div class="stat-value" id="wind">–<span class="stat-unit"> km/h</span></div>
       </div>
+      <div class="stat">
+        <div class="stat-label">UV Index</div>
+        <div class="stat-value" id="uv-value">–</div>
+        <div id="uv-badge"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Precipitation</div>
+        <div class="stat-value" id="precip">–<span class="stat-unit"> mm</span></div>
+        <div class="stat-sub" id="precip-sub"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Sunset</div>
+        <div class="stat-value" id="sunset">–</div>
+        <div class="stat-sub" id="sunrise-sub"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Today's Range</div>
+        <div class="avg-row">
+          <span class="avg-high" id="avg-high">–°</span>
+          <span class="avg-low"  id="avg-low">–°</span>
+        </div>
+        <div class="stat-sub">High · Low</div>
+      </div>
     </div>
     <div class="forecast" id="forecast"></div>
   </div>
@@ -492,11 +551,29 @@
     }
   }
 
+  // UV Index → risk label + CSS class (WHO scale)
+  function uvRisk(uv) {
+    if (uv <= 2)  return ['Low',       'uv-low'];
+    if (uv <= 5)  return ['Moderate',  'uv-moderate'];
+    if (uv <= 7)  return ['High',      'uv-high'];
+    if (uv <= 10) return ['Very High', 'uv-veryhigh'];
+    return            ['Extreme',    'uv-extreme'];
+  }
+
+  // Safely parse "YYYY-MM-DDTHH:MM" (no tz offset) → "H:MM AM/PM"
+  function parseDailyTime(isoStr) {
+    const match = String(isoStr).match(/T(\d{2}):(\d{2})$/);
+    if (!match) return '–';
+    const h = parseInt(match[1], 10);
+    const m = match[2];
+    return `${h % 12 || 12}:${m} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+
   async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel) {
     const wxRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-      `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+      `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day,uv_index,precipitation` +
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset` +
       `&wind_speed_unit=kmh&timezone=auto`
     );
     const wxData = await wxRes.json();
@@ -538,6 +615,44 @@
     windUnit.className = 'stat-unit';
     windUnit.textContent = ' km/h';
     windEl.appendChild(windUnit);
+
+    // ── UV Index ──────────────────────────────────
+    const uv = Math.round(Number(cur.uv_index));
+    const uvEl = document.getElementById('uv-value');
+    uvEl.textContent = isFinite(uv) ? String(uv) : '–';
+    const uvBadgeEl = document.getElementById('uv-badge');
+    uvBadgeEl.textContent = '';
+    if (isFinite(uv)) {
+      const [riskLabel, riskClass] = uvRisk(uv);
+      const badge = document.createElement('span');
+      badge.className = `uv-badge ${riskClass}`;
+      badge.textContent = riskLabel;
+      uvBadgeEl.appendChild(badge);
+    }
+
+    // ── Precipitation ─────────────────────────────
+    const precip = Number(cur.precipitation);
+    const precipEl = document.getElementById('precip');
+    precipEl.textContent = isFinite(precip) ? precip.toFixed(1) : '–';
+    const precipUnit = document.createElement('span');
+    precipUnit.className = 'stat-unit';
+    precipUnit.textContent = ' mm';
+    precipEl.appendChild(precipUnit);
+    document.getElementById('precip-sub').textContent =
+      isFinite(precip) ? (precip === 0 ? 'No precipitation' : 'Last hour') : '';
+
+    // ── Sunset & Sunrise ──────────────────────────
+    const sunsetRaw  = wxData.daily?.sunset?.[0]  ?? '';
+    const sunriseRaw = wxData.daily?.sunrise?.[0] ?? '';
+    document.getElementById('sunset').textContent    = parseDailyTime(sunsetRaw);
+    document.getElementById('sunrise-sub').textContent =
+      sunriseRaw ? `Sunrise ${parseDailyTime(sunriseRaw)}` : '';
+
+    // ── Today's High / Low ────────────────────────
+    const todayHigh = Math.round(Number(wxData.daily?.temperature_2m_max?.[0]));
+    const todayLow  = Math.round(Number(wxData.daily?.temperature_2m_min?.[0]));
+    document.getElementById('avg-high').textContent = isFinite(todayHigh) ? `${todayHigh}°` : '–°';
+    document.getElementById('avg-low').textContent  = isFinite(todayLow)  ? `${todayLow}°`  : '–°';
 
     renderForecast(wxData.daily);
 
