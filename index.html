@@ -3,12 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Content Security Policy: restrict what the page can load/execute -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'none';
+    script-src 'unsafe-inline';
+    style-src 'unsafe-inline';
+    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org;
+    img-src https://upload.wikimedia.org https://maps.wikimedia.org data:;
+  " />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="no-referrer" />
   <title>Weather Dashboard</title>
   <style>
+    html, body { height: 100%; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       min-height: 100vh;
+      width: 100vw;
       font-family: 'Segoe UI', system-ui, sans-serif;
       background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
       background-size: cover;
@@ -245,15 +257,70 @@
       margin-right: 8px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Local-time clock ─────────────────────────── */
+    .clock-widget {
+      position: fixed;
+      top: 24px;
+      right: 28px;
+      z-index: 10;
+      text-align: right;
+      display: none; /* hidden until a city is loaded */
+    }
+    .clock-widget.visible { display: block; }
+
+    .clock-time {
+      font-size: 2.4rem;
+      font-weight: 200;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .clock-time .colon {
+      opacity: 1;
+      animation: blink 1s step-start infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.2; } }
+
+    .clock-ampm {
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.6);
+      margin-left: 4px;
+      vertical-align: super;
+    }
+
+    .clock-date {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
+    .clock-tz {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
+
+<!-- Local-time clock — top-right corner -->
+<div class="clock-widget" id="clock-widget">
+  <div class="clock-time" id="clock-time"></div>
+  <div class="clock-date" id="clock-date"></div>
+  <div class="clock-tz"   id="clock-tz"></div>
+</div>
+
 <div class="container">
   <h1>Weather Dashboard</h1>
 
   <div class="search-row">
     <button class="loc-btn" id="loc-btn" title="Use my location">📍</button>
-    <input id="city-input" type="text" placeholder="Enter a city name…" autocomplete="off" />
+    <input id="city-input" type="text" placeholder="Enter a city name…" autocomplete="off" maxlength="100" />
     <button id="search-btn">Search</button>
   </div>
 
@@ -283,43 +350,103 @@
 </div>
 
 <script>
+  // Each entry: [label, day icon, night icon]
   const WMO_CODES = {
-    0:  ['Clear sky',              '☀️'],
-    1:  ['Mainly clear',           '🌤️'],
-    2:  ['Partly cloudy',          '⛅'],
-    3:  ['Overcast',               '☁️'],
-    45: ['Foggy',                  '🌫️'],
-    48: ['Icy fog',                '🌫️'],
-    51: ['Light drizzle',          '🌦️'],
-    53: ['Moderate drizzle',       '🌦️'],
-    55: ['Dense drizzle',          '🌧️'],
-    61: ['Slight rain',            '🌧️'],
-    63: ['Moderate rain',          '🌧️'],
-    65: ['Heavy rain',             '🌧️'],
-    71: ['Slight snow',            '🌨️'],
-    73: ['Moderate snow',          '❄️'],
-    75: ['Heavy snow',             '❄️'],
-    77: ['Snow grains',            '🌨️'],
-    80: ['Slight showers',         '🌦️'],
-    81: ['Moderate showers',       '🌧️'],
-    82: ['Violent showers',        '⛈️'],
-    85: ['Snow showers',           '🌨️'],
-    86: ['Heavy snow showers',     '❄️'],
-    95: ['Thunderstorm',           '⛈️'],
-    96: ['Thunderstorm w/ hail',   '⛈️'],
-    99: ['Thunderstorm w/ hail',   '⛈️'],
+    0:  ['Clear sky',              '☀️',  '🌙'],
+    1:  ['Mainly clear',           '🌤️', '🌙'],
+    2:  ['Partly cloudy',          '⛅',  '🌙'],
+    3:  ['Overcast',               '☁️',  '☁️'],
+    45: ['Foggy',                  '🌫️', '🌫️'],
+    48: ['Icy fog',                '🌫️', '🌫️'],
+    51: ['Light drizzle',          '🌦️', '🌧️'],
+    53: ['Moderate drizzle',       '🌦️', '🌧️'],
+    55: ['Dense drizzle',          '🌧️', '🌧️'],
+    61: ['Slight rain',            '🌧️', '🌧️'],
+    63: ['Moderate rain',          '🌧️', '🌧️'],
+    65: ['Heavy rain',             '🌧️', '🌧️'],
+    71: ['Slight snow',            '🌨️', '🌨️'],
+    73: ['Moderate snow',          '❄️',  '❄️'],
+    75: ['Heavy snow',             '❄️',  '❄️'],
+    77: ['Snow grains',            '🌨️', '🌨️'],
+    80: ['Slight showers',         '🌦️', '🌧️'],
+    81: ['Moderate showers',       '🌧️', '🌧️'],
+    82: ['Violent showers',        '⛈️',  '⛈️'],
+    85: ['Snow showers',           '🌨️', '🌨️'],
+    86: ['Heavy snow showers',     '❄️',  '❄️'],
+    95: ['Thunderstorm',           '⛈️',  '⛈️'],
+    96: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
+    99: ['Thunderstorm w/ hail',   '⛈️',  '⛈️'],
   };
 
-  function getCondition(code) {
-    return WMO_CODES[code] ?? ['Unknown', '🌡️'];
+  // isDay=true → daytime icon, isDay=false → night icon
+  // Forecast rows always use daytime (isDay defaults to true)
+  function getCondition(code, isDay = true) {
+    const entry = WMO_CODES[code] ?? ['Unknown', '🌡️', '🌡️'];
+    return [entry[0], isDay ? entry[1] : entry[2]];
   }
 
-  const input    = document.getElementById('city-input');
-  const btn      = document.getElementById('search-btn');
-  const locBtn   = document.getElementById('loc-btn');
-  const card     = document.getElementById('weather-card');
-  const errorBox = document.getElementById('error-box');
-  const loading  = document.getElementById('loading');
+  const input       = document.getElementById('city-input');
+  const btn         = document.getElementById('search-btn');
+  const locBtn      = document.getElementById('loc-btn');
+  const card        = document.getElementById('weather-card');
+  const errorBox    = document.getElementById('error-box');
+  const loading     = document.getElementById('loading');
+  const clockWidget = document.getElementById('clock-widget');
+  const clockTime   = document.getElementById('clock-time');
+  const clockDate   = document.getElementById('clock-date');
+  const clockTz     = document.getElementById('clock-tz');
+
+  let clockInterval = null;
+
+  function startClock(timezone) {
+    if (clockInterval) clearInterval(clockInterval);
+
+    function tick() {
+      const now = new Date();
+
+      // Time — HH:MM:SS in the city's timezone
+      const timeParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        hour:   '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      }).formatToParts(now);
+
+      const get = type => timeParts.find(p => p.type === type)?.value ?? '';
+      const hh   = get('hour');
+      const mm   = get('minute');
+      const ss   = get('second');
+      const ampm = get('dayPeriod');
+
+      // Build time display with blinking colons
+      clockTime.textContent = '';
+      const addText = t => { const s = document.createElement('span'); s.textContent = t; clockTime.appendChild(s); };
+      const addColon = () => { const c = document.createElement('span'); c.className = 'colon'; c.textContent = ':'; clockTime.appendChild(c); };
+      addText(hh); addColon(); addText(mm); addColon(); addText(ss);
+      const amEl = document.createElement('span');
+      amEl.className = 'clock-ampm';
+      amEl.textContent = ampm;
+      clockTime.appendChild(amEl);
+
+      // Date — e.g. "Monday, May 11"
+      clockDate.textContent = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        weekday: 'long',
+        month:   'long',
+        day:     'numeric',
+      }).format(now);
+
+      // Timezone abbreviation + offset — e.g. "EDT · UTC−4"
+      const tzAbbr  = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'short'  }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? '';
+      const tzLong  = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'longOffset' }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? '';
+      clockTz.textContent = tzLong ? `${tzAbbr} · ${tzLong}` : tzAbbr;
+    }
+
+    tick();
+    clockInterval = setInterval(tick, 1000);
+    clockWidget.classList.add('visible');
+  }
 
   const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -336,50 +463,87 @@
     card.classList.remove('visible');
   }
 
+  function makeEl(tag, cls, text) {
+    const el = document.createElement(tag);
+    el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
   function renderForecast(daily) {
     const container = document.getElementById('forecast');
-    container.innerHTML = '';
-    for (let i = 0; i < daily.time.length; i++) {
-      const date = new Date(daily.time[i] + 'T12:00:00');
+    container.textContent = ''; // safer than innerHTML = ''
+    const len = Math.min(daily.time.length, 7); // guard against unexpected payload sizes
+    for (let i = 0; i < len; i++) {
+      const code = Number(daily.weather_code[i]);
+      const high = Math.round(Number(daily.temperature_2m_max[i]));
+      const low  = Math.round(Number(daily.temperature_2m_min[i]));
+      if (!isFinite(high) || !isFinite(low)) continue; // skip malformed rows
+      const date    = new Date(String(daily.time[i]) + 'T12:00:00');
       const dayName = i === 0 ? 'Today' : DAY_NAMES[date.getDay()];
-      const [, icon] = getCondition(daily.weather_code[i]);
-      const high = Math.round(daily.temperature_2m_max[i]);
-      const low  = Math.round(daily.temperature_2m_min[i]);
-      const el = document.createElement('div');
-      el.className = 'forecast-day';
-      el.innerHTML = `
-        <div class="fc-day-name">${dayName}</div>
-        <div class="fc-icon">${icon}</div>
-        <div class="fc-high">${high}°</div>
-        <div class="fc-low">${low}°</div>
-      `;
-      container.appendChild(el);
+      const [, icon] = getCondition(code);
+
+      const card = makeEl('div', 'forecast-day');
+      card.appendChild(makeEl('div', 'fc-day-name', dayName));
+      card.appendChild(makeEl('div', 'fc-icon',     icon));
+      card.appendChild(makeEl('div', 'fc-high',     `${high}°`));
+      card.appendChild(makeEl('div', 'fc-low',      `${low}°`));
+      container.appendChild(card);
     }
   }
 
   async function fetchWeatherByCoords(latitude, longitude, cityLabel, countryLabel) {
     const wxRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-      `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code` +
+      `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,is_day` +
       `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
       `&wind_speed_unit=kmh&timezone=auto`
     );
     const wxData = await wxRes.json();
     const cur = wxData.current;
-    const [condLabel, condIcon] = getCondition(cur.weather_code);
+    // Validate all numeric fields before rendering
+    const temp     = Math.round(Number(cur.temperature_2m));
+    const humidity = Number(cur.relative_humidity_2m);
+    const wind     = Math.round(Number(cur.wind_speed_10m));
+    if (!isFinite(temp) || !isFinite(humidity) || !isFinite(wind)) {
+      throw new Error('Unexpected API response format.');
+    }
+    // is_day: 1 = daytime, 0 = night — validate as integer before use
+    const isDay = Number(cur.is_day) === 1;
+    const [condLabel, condIcon] = getCondition(Number(cur.weather_code), isDay);
 
     document.getElementById('city-name').textContent = cityLabel;
     document.getElementById('country').textContent   = countryLabel;
     document.getElementById('temp-icon').textContent = condIcon;
-    document.getElementById('temp-value').innerHTML  =
-      `${Math.round(cur.temperature_2m)}<sup>°C</sup>`;
+
+    // Build temp element safely via DOM (avoids innerHTML)
+    const tempEl = document.getElementById('temp-value');
+    tempEl.textContent = `${temp}`;
+    const sup = document.createElement('sup');
+    sup.textContent = '°C';
+    tempEl.appendChild(sup);
+
     document.getElementById('condition').textContent = condLabel;
-    document.getElementById('humidity').innerHTML    =
-      `${cur.relative_humidity_2m}<span class="stat-unit"> %</span>`;
-    document.getElementById('wind').innerHTML        =
-      `${Math.round(cur.wind_speed_10m)}<span class="stat-unit"> km/h</span>`;
+
+    const humEl = document.getElementById('humidity');
+    humEl.textContent = `${humidity}`;
+    const humUnit = document.createElement('span');
+    humUnit.className = 'stat-unit';
+    humUnit.textContent = ' %';
+    humEl.appendChild(humUnit);
+
+    const windEl = document.getElementById('wind');
+    windEl.textContent = `${wind}`;
+    const windUnit = document.createElement('span');
+    windUnit.className = 'stat-unit';
+    windUnit.textContent = ' km/h';
+    windEl.appendChild(windUnit);
 
     renderForecast(wxData.daily);
+
+    // Start live clock in the city's local timezone
+    const timezone = wxData.timezone || 'UTC';
+    startClock(timezone);
 
     loading.classList.remove('visible');
     card.classList.add('visible');
@@ -395,7 +559,7 @@
       );
       const geoData = await geoRes.json();
       if (!geoData.results?.length) {
-        showError(`City "${city}" not found. Try a different spelling.`);
+        showError('City not found. Try a different spelling.');
         return;
       }
       const { name, country, latitude, longitude } = geoData.results[0];
@@ -436,16 +600,29 @@
     });
   }
 
+  function isSafeImageUrl(url) {
+    // Only allow HTTPS URLs pointing to Wikimedia image servers
+    try {
+      const u = new URL(url);
+      return u.protocol === 'https:' &&
+             (u.hostname.endsWith('.wikimedia.org') || u.hostname.endsWith('.wikipedia.org'));
+    } catch { return false; }
+  }
+
   async function setCityBackground(cityName) {
     try {
       const res = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
       );
+      if (!res.ok) return;
       const data = await res.json();
       const imgUrl = data.originalimage?.source || data.thumbnail?.source;
-      if (!imgUrl) return;
+      if (!imgUrl || !isSafeImageUrl(imgUrl)) return; // reject any unexpected URL
       const img = new Image();
-      img.onload = () => { document.body.style.backgroundImage = `url('${imgUrl}')`; };
+      img.onload = () => {
+        // CSS-escape single quotes so the URL can never break out of url('...')
+        document.body.style.backgroundImage = `url('${imgUrl.replace(/'/g, '%27')}')`;
+      };
       img.src = imgUrl;
     } catch {
       // silently fail — keep gradient
