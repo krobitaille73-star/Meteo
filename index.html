@@ -8,7 +8,7 @@
     default-src 'none';
     script-src 'unsafe-inline';
     style-src 'unsafe-inline';
-    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org https://open.er-api.com;
+    connect-src https://geocoding-api.open-meteo.com https://api.open-meteo.com https://nominatim.openstreetmap.org https://en.wikipedia.org https://commons.wikimedia.org https://open.er-api.com;
     img-src https://upload.wikimedia.org https://maps.wikimedia.org data:;
   " />
   <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -41,6 +41,15 @@
       background: linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%);
       pointer-events: none;
       z-index: 0;
+      transition: background 0.8s ease;
+    }
+
+    /* Night mode — subtle overlay; the photo itself is already dark */
+    body.is-night {
+      background: linear-gradient(135deg, #020818, #080d28, #060412);
+    }
+    body.is-night::before {
+      background: linear-gradient(to bottom, rgba(0,5,20,0.30) 0%, rgba(0,3,15,0.55) 100%);
     }
 
     .container {
@@ -814,6 +823,7 @@
     }
     // is_day: 1 = daytime, 0 = night — validate as integer before use
     const isDay = Number(cur.is_day) === 1;
+    document.body.classList.toggle('is-night', !isDay);
     const [condLabel, condIcon] = getCondition(Number(cur.weather_code), isDay);
 
     document.getElementById('city-name').textContent = cityLabel;
@@ -944,18 +954,56 @@
     });
   }
 
-  async function setCityBackground(cityName) {
+  // Fetch the hero image from a Wikipedia article by title. Returns null on failure.
+  async function fetchWikipediaImage(title) {
     try {
       const res = await fetch(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cityName)}`
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
       );
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const data = await res.json();
-      const imgUrl = data.originalimage?.source || data.thumbnail?.source;
-      if (!imgUrl || !isSafeImageUrl(imgUrl)) return; // reject any unexpected URL
+      const url = data.originalimage?.source || data.thumbnail?.source;
+      return url && isSafeImageUrl(url) ? url : null;
+    } catch { return null; }
+  }
+
+  // Search Wikimedia Commons for a night photo. Returns null if nothing suitable found.
+  async function fetchCommonsNightPhoto(cityName) {
+    try {
+      const res = await fetch(
+        `https://commons.wikimedia.org/w/api.php?action=query&generator=search` +
+        `&gsrsearch=${encodeURIComponent(cityName + ' night')}&gsrnamespace=6&gsrlimit=20` +
+        `&prop=imageinfo&iiprop=url&format=json&origin=*`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const pages = Object.values(data.query?.pages ?? {});
+      for (const page of pages) {
+        const url = page.imageinfo?.[0]?.url ?? '';
+        if (isSafeImageUrl(url) && /\.(jpe?g|png)$/i.test(url)) return url;
+      }
+      return null;
+    } catch { return null; }
+  }
+
+  async function setCityBackground(cityName) {
+    const isNight = document.body.classList.contains('is-night');
+    try {
+      let imgUrl;
+
+      if (!isNight) {
+        imgUrl = await fetchWikipediaImage(cityName);
+      } else {
+        // Waterfall: article "at night" → "skyline" article → Commons search → day fallback
+        imgUrl = await fetchWikipediaImage(cityName + ' at night')
+              || await fetchWikipediaImage(cityName + ' skyline')
+              || await fetchCommonsNightPhoto(cityName)
+              || await fetchWikipediaImage(cityName);
+      }
+
+      if (!imgUrl || !isSafeImageUrl(imgUrl)) return;
       const img = new Image();
       img.onload = () => {
-        // CSS-escape single quotes so the URL can never break out of url('...')
         document.body.style.backgroundImage = `url('${imgUrl.replace(/'/g, '%27')}')`;
       };
       img.src = imgUrl;
